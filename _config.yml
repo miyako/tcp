@@ -5,7 +5,7 @@ kramdown:
   syntax_highlighter: rouge
 highlighter: rouge
 plugins_dir: _plugins
-baseurl: /procs
+baseurl: /tcp
 
 title: "procs"
 description: "Use procs from 4D"
@@ -14,7 +14,7 @@ show_downloads: true       # controls the download links in header
 github:
   is_user_page: true
   owner_url: "https://github.com/miyako"
-  repository_url: "https://github.com/miyako/procs"
+  repository_url: "https://github.com/miyako/tcp"
   is_project_page: false
 
 exclude:
