@@ -1,7 +1,7 @@
-# procfd
+# procs
 
 
-[procfd](https://github.com/deshaw/procfd)
+[procs](https://github.com/dalance/procs)
 
 ```
 cargo build --release --target aarch64-apple-darwin
