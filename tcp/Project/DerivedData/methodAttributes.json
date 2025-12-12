@@ -1,0 +1,31 @@
+{
+	"methods": {
+		"_onResponse": {
+			"timeStamp": "2025-12-12T11:29:18Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"onResponse": {
+			"timeStamp": "2025-12-12T11:29:40Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"onSuccess": {
+			"timeStamp": "2025-12-12T11:21:29Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"TEST_tcp": {
+			"timeStamp": "2025-12-12T10:50:46Z",
+			"attributes": {
+				"invisible": true
+			}
+		}
+	}
+}

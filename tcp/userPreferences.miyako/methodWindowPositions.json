@@ -1,0 +1,50 @@
+{
+	"Sources/Classes/_tcp_Controller.4dm": {
+		"left": 443,
+		"top": 369,
+		"width": 908,
+		"height": 763
+	},
+	"Sources/Classes/tcp_splitter.4dm": {
+		"left": 443,
+		"top": 369,
+		"width": 908,
+		"height": 763
+	},
+	"Sources/Classes/tcp.4dm": {
+		"left": 688,
+		"top": 191,
+		"width": 1194,
+		"height": 807
+	},
+	"Sources/Methods/TEST_tcp.4dm": {
+		"left": 348,
+		"top": 428,
+		"width": 908,
+		"height": 763
+	},
+	"Sources/Methods/onResponse.4dm": {
+		"left": 443,
+		"top": 369,
+		"width": 908,
+		"height": 763
+	},
+	"Trash/Methods/(__).4dm": {
+		"left": 355,
+		"top": 571,
+		"width": 908,
+		"height": 763
+	},
+	"Sources/Methods/onSuccess.4dm": {
+		"left": 348,
+		"top": 252,
+		"width": 908,
+		"height": 763
+	},
+	"Sources/Methods/_onResponse.4dm": {
+		"left": 348,
+		"top": 252,
+		"width": 908,
+		"height": 763
+	}
+}
