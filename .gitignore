@@ -8,6 +8,5 @@ tcp/Settings/buildApp.4DSettings
 tcp/Data/Logs/buildApp.log.xml
 tcp/Data/Logs/BuildLogStyleSheet.css
 tcp/Resources/en.lproj/syntaxEN.json
-tcp/userPreferences.miyako/workspace.json
-tcp/userPreferences.miyako/preferences.4DPreferences
-tcp/userPreferences.miyako/methodPreferences.json
+tcp/userPreferences.*
+tcp/Data/
