@@ -27,17 +27,35 @@ Typical use: after `WEB START SERVER` fails, find out which process holds the po
 
 ## Build procs
 
-[procs](https://github.com/dalance/procs)
+The bundled binaries are [procs](https://github.com/dalance/procs) **v0.14.10**, built from the upstream tag without changes.
+
+| binary | architectures | signature | SHA-256 |
+|-|-|-|-|
+| `tcp/Resources/bin/MacOS/procs` | x86_64, arm64 | Developer ID, notarized | `63fd037ec34c06e174c42d245d59055e8ba26274da719ba87f1f7e186ef0bc28` |
+| `tcp/Resources/bin/Windows/procs.exe` | x64 | **unsigned** | `7f2b0bc3fc6c19d8c8b35c2c2c474ed6d36b9f1897dbf7469a054b3ce63444ef` |
+
+The Windows executable is not Authenticode-signed; SmartScreen or antivirus software may flag or block it.
+
+macOS:
 
 ```
+git clone --branch v0.14.10 https://github.com/dalance/procs && cd procs
 cargo build --release --target aarch64-apple-darwin
 cargo build --release --target x86_64-apple-darwin
-
+lipo -create -output procs target/aarch64-apple-darwin/release/procs target/x86_64-apple-darwin/release/procs
+codesign --force --options runtime --timestamp --sign "Developer ID Application: ..." procs
 ```
 
-The component passes `--load-config` with `tcp/Resources/procs.toml`, the output of `procs --gen-config` for the bundled version. Regenerate it when you update `procs`.
+Then notarize it (`xcrun notarytool submit`).
+
+Windows:
 
 ```
+git clone --branch v0.14.10 https://github.com/dalance/procs && cd procs
 rustup default stable-x86_64-pc-windows-msvc --force-non-host
 cargo build --release
 ```
+
+The component passes `--load-config` with `tcp/Resources/procs.toml`, the output of `procs --gen-config` for the bundled version. Regenerate it, and update the table above, when you update `procs`.
+
+The CI tests (`.github/workflows/test.yml`, `tests/run.sh`) compile the component and check it against real listeners on macOS and Windows with the tool4d version in `package.json`.

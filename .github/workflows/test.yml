@@ -24,15 +24,26 @@ jobs:
         id: tool
         uses: miyako/4D/.github/actions/tool4d-get-version@v1
 
+      #inline: the Windows archive is bzip2 despite its .tar.xz name, so `tar xJf` (tool4d-download) fails
       - name: get tool4d
         id: get
-        uses: miyako/4D/.github/actions/tool4d-download@v1
-        with:
-          platform: ${{ runner.os == 'Windows' && 'windows' || steps.tool.outputs.platform }}
-          branch: ${{ steps.tool.outputs.branch }}
-          version: ${{ steps.tool.outputs.version }}
-          build: ${{ steps.tool.outputs.build }}
-          arch: ${{ steps.tool.outputs.arch }}
+        run: |
+          base="https://resources-download.4d.com/release/${BRANCH}/${VERSION}/${BUILD}"
+          if [ "${RUNNER_OS}" = Windows ]; then
+            url="${base}/win/tool4d_win.tar.xz"; exe=tool4d/tool4d.exe
+          else
+            [ "${ARCH}" = arm ] && suffix=arm64 || suffix=x86_64
+            url="${base}/mac/tool4d_${suffix}.tar.xz"; exe=tool4d.app/Contents/MacOS/tool4d
+          fi
+          curl -sfL "${url}" -o tool4d.archive
+          tar xf tool4d.archive
+          echo "tool4d_executable_path=${exe}" >> "${GITHUB_OUTPUT}"
+        shell: bash
+        env:
+          BRANCH: ${{ steps.tool.outputs.branch }}
+          VERSION: ${{ steps.tool.outputs.version }}
+          BUILD: ${{ steps.tool.outputs.build }}
+          ARCH: ${{ steps.tool.outputs.arch }}
 
       - name: compile and test
         run: tests/run.sh "${{ steps.get.outputs.tool4d_executable_path }}"
