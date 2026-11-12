@@ -4,10 +4,12 @@
 //CI test, copied into the project by tests/run.sh; reads ci.json, writes ci_result.json
 
 If (Count parameters:C259#0)
+	TEST_ci_log("worker check")
 	ON ERR CALL:C155("TEST_ci_err")
 	var $worker : cs:C1710.tcp
 	$worker:=cs:C1710.tcp.new()
 	$worker.check($params.options; Formula:C1597(TEST_ci_cb($1; $2)))
+	TEST_ci_log("worker check returned")
 	return 
 End if 
 
@@ -25,6 +27,7 @@ ON ERR CALL:C155("TEST_ci_err")
 var $failures : Collection
 $failures:=[]
 
+TEST_ci_log("compile")
 //compile (the release build uses the same 4D version)
 var $compile : Object
 var $target : Text
@@ -45,6 +48,7 @@ var $l : Object
 var $i : Integer
 var $res; $m : Collection
 
+TEST_ci_log("sync")
 //sync: listeners (user + root/SYSTEM) are found, free port is free
 $options:=[]
 For each ($l; $ci.listeners)
@@ -74,6 +78,7 @@ Else
 	End if 
 End if 
 
+TEST_ci_log("output")
 //output file
 var $file : 4D:C1709.File
 $file:=$root.file("ci_out.json")
@@ -84,6 +89,7 @@ If ($m=Null:C1517) || (Not:C34($m.extract("PID").includes($l.pid)))
 	$failures.push("output: PID "+String:C10($l.pid)+" not found in file")
 End if 
 
+TEST_ci_log("async")
 //async
 var $expected : Integer
 $expected:=$options.length
@@ -104,6 +110,7 @@ If ($event=Null:C1517) || (Not:C34($event.success))
 	$failures.push("async free: "+JSON Stringify:C1217($event))
 End if 
 
+TEST_ci_log("error sync")
 //procs failure (broken bundled config) is reported, not "free"
 var $config : 4D:C1709.File
 $config:=$root.file("Resources/procs.toml")
@@ -117,6 +124,7 @@ If ($res[0]#Null:C1517) || ($options[0].error=Null:C1517) || (Num:C11($options[0
 	$failures.push("sync error: "+JSON Stringify:C1217({result: $res[0]; option: $options[0]}))
 End if 
 
+TEST_ci_log("error async")
 $expected+=1
 CALL WORKER:C1389("ci"; "TEST_ci"; {options: [{port: $ci.free}]})
 TEST_ci_wait($expected)
@@ -125,10 +133,12 @@ If ($event=Null:C1517) || ($event.success) || (String:C10($event.error)="")
 	$failures.push("async error: "+JSON Stringify:C1217($event))
 End if 
 
+TEST_ci_log("restore")
 $config.setContent($saved)
 
 var $errors : Collection
 $errors:=Storage:C1525.ci.errors.copy()
 $root.file("ci_result.json").setText(JSON Stringify:C1217({success: ($failures.length=0) && ($errors.length=0); failures: $failures; errors: $errors; version: Application version:C493(*)}; *))
 
+TEST_ci_log("quit")
 QUIT 4D:C291

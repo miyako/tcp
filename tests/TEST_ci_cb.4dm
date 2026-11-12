@@ -4,3 +4,4 @@
 Use (Storage:C1525.ci.events)
 	Storage:C1525.ci.events.push(OB Copy:C1225($status; ck shared:K85:29; Storage:C1525.ci.events))
 End use 
+TEST_ci_log("callback "+String($status.port))

@@ -34,8 +34,8 @@ Else
 	//procs only sees processes the current user can inspect; add listeners owned by root, other users or SYSTEM
 	If (_merge($json; _listeners()))
 		$text:=JSON Stringify:C1217($json)
-		This:C1470.stdOut:=$text
 	End if 
+	This:C1470.stdOut:=$text
 	If (OB Instance of:C1731($context.data.output; 4D:C1709.File))
 		$context.data.output.setText($text)
 	End if 

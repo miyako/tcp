@@ -9,9 +9,15 @@ export USER_PORT=${USER_PORT:-18190} ROOT_PORT=${ROOT_PORT:-18192} FREE_PORT=${F
 export LISTEN_SECONDS=${LISTEN_SECONDS:-300}
 
 cleanup() {
-	rm -f tcp/Project/Sources/Methods/TEST_ci*.4dm tcp/ci.json tcp/ci_*.json
+	#the test breaks the bundled config on purpose; restore it even if tool4d crashed or hung
+	if [ -f "$CONFIG_BACKUP" ]; then mv -f "$CONFIG_BACKUP" tcp/Resources/procs.toml; fi
+	if [ -n "${USER_LISTENER:-}" ]; then kill $USER_LISTENER 2>/dev/null || true; fi
+	if [ -n "${ROOT_LISTENER:-}" ]; then sudo -n kill $ROOT_LISTENER 2>/dev/null || true; fi
+	rm -f tcp/Project/Sources/Methods/TEST_ci*.4dm tcp/ci.json tcp/ci_*.json tcp/ci_trace.txt
 	if [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ]; then rm -f "$HOME/.procs.toml"; fi
 }
+CONFIG_BACKUP=$(mktemp)
+cp tcp/Resources/procs.toml "$CONFIG_BACKUP"
 trap cleanup EXIT
 
 case "$(uname -s)" in
@@ -19,7 +25,7 @@ case "$(uname -s)" in
 		PROCS=tcp/Resources/bin/MacOS/procs
 		PROJECT=$PWD/tcp/Project/tcp.4DProject
 		#a listener owned by root: procs can't see it without the netstat fallback
-		if sudo -n true 2>/dev/null; then sudo -n "$PY" tests/listen.py $ROOT_PORT tcp/ci_root.json & fi
+		if sudo -n true 2>/dev/null; then sudo -n "$PY" tests/listen.py $ROOT_PORT tcp/ci_root.json & ROOT_LISTENER=$!; fi
 		;;
 	*)
 		PROCS=tcp/Resources/bin/Windows/procs.exe
@@ -27,6 +33,7 @@ case "$(uname -s)" in
 		;;
 esac
 "$PY" tests/listen.py $USER_PORT tcp/ci_user.json &
+USER_LISTENER=$!
 
 for _ in $(seq 50); do [ -f tcp/ci_user.json ] && break; sleep 0.2; done
 sleep 1
@@ -58,8 +65,9 @@ if [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ]; then
 fi
 
 cp tests/TEST_ci*.4dm tcp/Project/Sources/Methods/
-perl -e 'alarm 300; exec @ARGV' "$TOOL4D" "$PROJECT" --startup-method=TEST_ci --skip-onstartup --dataless || true
+perl -e 'alarm ${TOOL4D_TIMEOUT:-300}; exec @ARGV' "$TOOL4D" "$PROJECT" --startup-method=TEST_ci --skip-onstartup --dataless || true
 
+if [ -f tcp/ci_trace.txt ]; then echo "--- trace"; cat tcp/ci_trace.txt; fi
 if [ ! -f tcp/ci_result.json ]; then echo "tool4d did not write ci_result.json"; exit 1; fi
 cat tcp/ci_result.json
 "$PY" -c 'import json,sys; sys.exit(0 if json.load(open("tcp/ci_result.json"))["success"] else 1)'

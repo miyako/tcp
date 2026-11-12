@@ -18,11 +18,13 @@ Case of
 		return Null:C1517
 End case 
 
-var $worker : 4D:C1709.SystemWorker
-$worker:=4D:C1709.SystemWorker.new($command; {hideWindow: True:C214})
-$worker.wait(10)
+//runs inside onResponse: a nested SystemWorker.wait() there can crash 4D, LAUNCH EXTERNAL PROCESS doesn't pump messages
+var $stdIn; $stdOut; $stdErr : Text
+SET ENVIRONMENT VARIABLE:C812("_4D_OPTION_BLOCKING_EXTERNAL_PROCESS"; "true")
+SET ENVIRONMENT VARIABLE:C812("_4D_OPTION_HIDE_CONSOLE"; "true")
+LAUNCH EXTERNAL PROCESS:C811($command; $stdIn; $stdOut; $stdErr)
 
-If ($worker.exitCode#0) || ($worker.response="")
+If (OK=0) || ($stdOut="")
 	return Null:C1517
 End if 
 
@@ -35,7 +37,7 @@ ARRAY LONGINT:C221($len; 0)
 var $line; $rest; $name; $key : Text
 var $port; $PID : Integer
 
-For each ($line; Split string:C1554(Replace string:C233($worker.response; "\r"; ""; *); "\n"))
+For each ($line; Split string:C1554(Replace string:C233($stdOut; "\r"; ""; *); "\n"))
 	
 	If (Not:C34(Match regex:C1019($pattern; $line; 1; $pos; $len)))
 		continue
