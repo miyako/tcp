@@ -46,7 +46,7 @@ Function get($port : Integer; $json : Collection) : Collection
 	
 Function check($option : Variant; $formula : 4D:C1709.Function) : Collection
 	
-	var $stdOut; $isStream; $isAsync : Boolean
+	var $stdOut; $isAsync : Boolean
 	var $options : Collection
 	var $results : Collection
 	$results:=[]
@@ -85,7 +85,7 @@ Function check($option : Variant; $formula : 4D:C1709.Function) : Collection
 		End if 
 		
 		var $worker : 4D:C1709.SystemWorker
-		$worker:=This:C1470.controller.execute($command; $isStream ? $option.file : Null:C1517; $option.data).worker
+		$worker:=This:C1470.controller.execute($command; Null:C1517; $option.data).worker
 		
 		If (Not:C34($isAsync))
 			$worker.wait()
