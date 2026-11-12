@@ -9,6 +9,7 @@ on:
       - '*/Project/Sources/*/*.4DForm'
       - '*/Project/Sources/*.4DCatalog'
       - '*/Project/Resources/**'
+      - '*/Resources/**'
   workflow_dispatch:
     inputs:
         use_self_hosted:
@@ -64,6 +65,10 @@ jobs:
           version: ${{ steps.tool.outputs.version }}
           build: ${{ steps.tool.outputs.build }}
           arch: ${{ steps.tool.outputs.arch }}
+
+      - name: compile and test
+        run: tests/run.sh "${{ steps.get.outputs.tool4d_executable_path }}"
+        shell: bash
 
       - name: build
         id: build
@@ -144,6 +149,10 @@ jobs:
           version: ${{ steps.tool.outputs.version }}
           build: ${{ steps.tool.outputs.build }}
           arch: ${{ steps.tool.outputs.arch }}
+
+      - name: compile and test
+        run: tests/run.sh "${{ steps.get.outputs.tool4d_executable_path }}"
+        shell: bash
 
       - name: build
         id: build
