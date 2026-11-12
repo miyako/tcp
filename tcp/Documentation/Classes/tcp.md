@@ -9,9 +9,13 @@
 
 ## Description
 
-`cs.tcp.tcp` extends [`_CLI`](_CLI.md) and wraps [`procs`](https://github.com/dalance/procs), a `ps` replacement written in Rust, to inspect which processes are listening on given TCP ports. It invokes `procs --insert port --json` and parses the JSON output to filter results by port number.
+`cs.tcp.tcp` extends [`_CLI`](_CLI.md) and wraps [`procs`](https://github.com/dalance/procs), a `ps` replacement written in Rust, to inspect which processes are listening on given TCP ports. It invokes `procs --load-config <Resources/procs.toml> --insert port --json` and parses the JSON output to filter results by port number.
 
-The command does not filter by port: each query lists all processes with their TCP ports, and the filtering is done in 4D by `get()`.
+The command does not filter by port: each query lists all processes with their TCP ports, and the filtering is done in 4D by `get()`. (A `procs` port keyword would only match a process's first port.)
+
+`procs` reads the bundled `Resources/procs.toml` (its default configuration), so a user's own `procs` configuration file cannot break or change the output.
+
+`procs` only lists processes the current user can inspect. Listeners owned by root, other users or `SYSTEM` are added from `netstat` (`netstat -anv -p tcp` on macOS, `netstat -ano` on Windows). These entries have only `PID`, `TCP` and `Command` (the process name on macOS, empty on Windows). When entries are added, the JSON is re-serialised by 4D.
 
 `controller` must be `cs._tcp_Controller` or a subclass of it; any other class (or none) falls back to `cs.tcp._tcp_Controller`. The constructor always sets the controller's `onResponse` to the internal response handler.
 
@@ -37,16 +41,23 @@ Runs `procs --insert port --json` for one or more port queries.
 | --- | --- | --- | --- |
 | option | Object \| Collection | -> | A single options object or a collection of options objects (see table below) |
 | formula | 4D.Function | -> | If provided, the call is asynchronous and results are delivered to this callback |
-| Result | Collection | <- | Collection of raw stdout strings (one per query), or `Null` in async mode |
+| Result | Collection | <- | Collection of JSON strings (one per query), or `Null` in async mode |
 
 **option object properties:**
 
 | Property | Type | Description |
 | --- | --- | --- |
 | port | Integer | TCP port to query |
-| output | 4D.File | If present, the raw `procs` JSON is written to this file (sync and async), and the corresponding entry in the sync result is `Null` instead of the stdout text |
+| output | 4D.File | If present, the JSON is written to this file (sync and async), and the corresponding entry in the sync result is `Null` instead of the JSON text. The file is not written if `procs` fails |
 
-**Sync mode** (no `formula`): each worker is started and `worker.wait()` is called before moving to the next. `controller.stdOut` is collected into `$results` and `controller.clear()` is called after each command. The method returns a Collection of raw stdout strings.
+After a sync query, `check()` sets these properties on the option object if `procs` failed (they are removed at the start of each query):
+
+| Property | Type | Description |
+| --- | --- | --- |
+| error | Text | `procs` standard error, or a description of the failure |
+| exitCode | Integer | `procs` exit code |
+
+**Sync mode** (no `formula`): each worker is started and `worker.wait()` is called before moving to the next. `controller.stdOut` is collected into `$results` and `controller.clear()` is called after each command. The method returns a Collection of JSON strings; an entry is `Null` if `procs` failed (see `error` above). A failed query is never reported as an empty result.
 
 **Async mode** (with `formula`): workers are started without waiting. The `formula` is stored on the per-command `data` context as `onResponse` and invoked by the controller's response handler (`_onResponse`), which then calls `controller.clear()` so `stdOut` does not grow across queries. The method returns `Null` immediately. The calling process must stay alive to process callbacks, e.g. a worker started with `CALL WORKER`.
 
@@ -61,9 +72,11 @@ Runs `procs --insert port --json` for one or more port queries.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| success | Boolean | `True` if **no** process is listening on `port` (the port is free) |
-| PID | Collection | PIDs of the processes listening on `port`; empty if `success` is `True` |
+| success | Boolean | `True` if **no** process is listening on `port` (the port is free); `False` if a process is listening or the query failed |
+| PID | Collection | PIDs of the processes listening on `port`; empty if `success` is `True` or the query failed |
 | port | Integer | The queried port |
+| error | Text | Only present if the query failed: `procs` standard error, or a description of the failure |
+| exitCode | Integer | Only present if the query failed and the exit code is already known |
 
 In both modes a `data` context object is attached to each worker containing:
 
@@ -85,7 +98,7 @@ $tcp:=cs.tcp.tcp.new()
 var $results : Collection
 $results:=$tcp.check({port: 8080}; Null)
 
-If ($results#Null) && ($results.length>0)
+If ($results#Null) && ($results.length>0) && ($results[0]#Null)
     var $json : Collection
     $json:=JSON Parse($results[0]; Is collection)
     var $matches : Collection
@@ -127,9 +140,12 @@ The callback is called once per port:
 //onResponse
 #DECLARE($status : Object; $option : Object)
 
-If (Not($status.success))
-    LOG EVENT(Into 4D debug message; "Port "+String($status.port)+" in use by PID "+$status.PID.join(","))
-End if 
+Case of 
+    : ($status.error#Null)
+        LOG EVENT(Into 4D debug message; "Port "+String($status.port)+" could not be checked: "+$status.error)
+    : (Not($status.success))
+        LOG EVENT(Into 4D debug message; "Port "+String($status.port)+" in use by PID "+$status.PID.join(","))
+End case 
 ```
 
 ## Tip: checking port availability
@@ -155,7 +171,9 @@ If (Not(WEB Is server running))
     $results:=$tcp.check({port: $port})
     
     var $owners : Collection
-    $owners:=$tcp.get($port; JSON Parse($results[0]; Is collection))
+    If ($results[0]#Null)
+        $owners:=$tcp.get($port; JSON Parse($results[0]; Is collection))
+    End if 
     
     If ($owners#Null)
         LOG EVENT(Into 4D debug message; "port "+String($port)+" is held by: "+JSON Stringify($owners))
@@ -166,7 +184,8 @@ End if
 
 > [!IMPORTANT]
 > * It observes; it does not reserve or block a port.
-> * On macOS, a 4D process running as a normal user **may** not see sockets owned by other users, such as root daemons or the bundled Apache `httpd` (`_www`). This has not been verified; test once against a root-owned listener before you rely on an empty result.
+> * Listeners owned by root, other users or `SYSTEM` are found through `netstat`, but their entries have no user, CPU or memory information.
+> * A `Null` sync result or a `$status.error` means the query failed, not that the port is free.
 > * On Windows, ports held by HTTP.sys (IIS, WinRM, SSRS, …) show up as `System` with PID `4`. Run `netsh http show servicestate` to identify the actual service.
 
 ## See also

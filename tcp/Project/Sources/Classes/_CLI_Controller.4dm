@@ -129,10 +129,15 @@ Function _onExecute($worker : 4D:C1709.SystemWorker; $params : Object)
 		This:C1470._execute()
 	End if 
 	
+	var $pid : Text
+	$pid:=String:C10($worker.pid)
+	
 	If (OB Instance of:C1731(This:C1470._onResponse; 4D:C1709.Function))
-		$params.context:=This:C1470.SYSTEM_WORKER_CONTEXT[String:C10($worker.pid)]
+		$params.context:=This:C1470.SYSTEM_WORKER_CONTEXT[$pid]
 		This:C1470._onResponse.call(This:C1470; $worker; $params)
 	End if 
+	
+	OB REMOVE:C1226(This:C1470.SYSTEM_WORKER_CONTEXT; $pid)
 	
 Function _execute()
 	

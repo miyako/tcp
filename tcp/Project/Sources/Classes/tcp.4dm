@@ -5,7 +5,8 @@ Class constructor($controller : 4D:C1709.Class)
 	//accept cs._tcp_Controller or a subclass of it
 	var $class : 4D:C1709.Class
 	$class:=$controller
-	While ($class#Null:C1517) && ($class#cs:C1710._tcp_Controller)
+	//4D 20.x can't compare objects with =/#; includes() compares references
+	While ($class#Null:C1517) && (Not:C34([cs:C1710._tcp_Controller].includes($class)))
 		$class:=$class.superclass
 	End while 
 	
@@ -72,7 +73,11 @@ Function check($option : Variant; $formula : 4D:C1709.Function) : Collection
 		$stdOut:=Not:C34(OB Instance of:C1731($option.output; 4D:C1709.File))
 		
 		$command:=This:C1470.escape(This:C1470.executablePath)
+		$command+=This:C1470._configOption()
 		$command+=" --insert port --json"
+		
+		OB REMOVE:C1226($option; "error")
+		OB REMOVE:C1226($option; "exitCode")
 		
 		$option.data:={}
 		$option.data.port:=$option.port
@@ -89,12 +94,15 @@ Function check($option : Variant; $formula : 4D:C1709.Function) : Collection
 		
 		If (Not:C34($isAsync))
 			$worker.wait()
+			If ($option.error#Null:C1517)
+				$option.exitCode:=$worker.exitCode
+			End if 
 		End if 
 		
 		If (Not:C34($isAsync))
 			//%W-550.26
 			//%W-550.2
-			If ($stdOut)
+			If ($stdOut) && ($option.error=Null:C1517)
 				$results.push(This:C1470.controller.stdOut)
 			Else 
 				$results.push(Null:C1517)
@@ -109,3 +117,19 @@ Function check($option : Variant; $formula : 4D:C1709.Function) : Collection
 	If (Not:C34($isAsync))
 		return $results
 	End if 
+	
+	//MARK:-private methods
+	
+Function _configOption() : Text
+	
+	//bundled config: ignore the user's procs config files, which can break or change the output
+	var $config : 4D:C1709.File
+	$config:=File:C1566("/RESOURCES/procs.toml")
+	
+	If (Not:C34($config.exists))
+		return ""
+	End if 
+	
+	$config:=This:C1470.expand($config)
+	
+	return " --load-config "+This:C1470.escape(Is Windows:C1573 ? $config.platformPath : $config.path)
