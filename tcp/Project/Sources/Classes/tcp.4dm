@@ -2,11 +2,21 @@ Class extends _CLI
 
 Class constructor($controller : 4D:C1709.Class)
 	
-	If (Not:C34(OB Instance of:C1731($controller; cs:C1710._tcp_Controller)))
+	//accept cs._tcp_Controller or a subclass of it
+	var $class : 4D:C1709.Class
+	$class:=$controller
+	While ($class#Null:C1517) && ($class#cs:C1710._tcp_Controller)
+		$class:=$class.superclass
+	End while 
+	
+	If ($class=Null:C1517)
 		$controller:=cs:C1710._tcp_Controller
 	End if 
 	
 	Super:C1705("procs"; $controller)
+	
+	//set once: the controller swaps onResponse while a worker is running
+	This:C1470.controller.onResponse:=Formula:C1597(_onResponse)
 	
 Function get worker() : 4D:C1709.SystemWorker
 	
@@ -52,8 +62,6 @@ Function check($option : Variant; $formula : 4D:C1709.Function) : Collection
 	
 	var $commands : Collection
 	$commands:=[]
-	
-	This:C1470.controller.onResponse:=Formula:C1597(_onResponse)
 	
 	For each ($option; $options)
 		

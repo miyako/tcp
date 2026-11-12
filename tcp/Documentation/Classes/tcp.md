@@ -13,7 +13,7 @@
 
 The command does not filter by port: each query lists all processes with their TCP ports, and the filtering is done in 4D by `get()`.
 
-The constructor tests `controller` with `OB Instance of($controller; cs._tcp_Controller)`. Because `controller` is a class, not an instance, this test is false for any class passed, so the constructor currently always uses `cs.tcp._tcp_Controller`.
+`controller` must be `cs._tcp_Controller` or a subclass of it; any other class (or none) falls back to `cs.tcp._tcp_Controller`. The constructor always sets the controller's `onResponse` to the internal response handler.
 
 ### Methods
 
