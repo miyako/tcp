@@ -13,7 +13,7 @@
 
 The command does not filter by port: each query lists all processes with their TCP ports, and the filtering is done in 4D by `get()`.
 
-The constructor tests `controller` with `OB Instance of($controller; cs._tcp_Controller)`. Because `controller` is a class, not an instance, this test is false for any class passed, so the constructor currently always uses `cs.tcp._tcp_Controller`.
+`controller` must be `cs._tcp_Controller` or a subclass of it; any other class (or none) falls back to `cs.tcp._tcp_Controller`. The constructor always sets the controller's `onResponse` to the internal response handler.
 
 ### Methods
 
@@ -44,11 +44,11 @@ Runs `procs --insert port --json` for one or more port queries.
 | Property | Type | Description |
 | --- | --- | --- |
 | port | Integer | TCP port to query |
-| output | 4D.File | If present, the corresponding entry in the sync result is `Null` instead of the stdout text. The output is not written to the file in the current implementation |
+| output | 4D.File | If present, the raw `procs` JSON is written to this file (sync and async), and the corresponding entry in the sync result is `Null` instead of the stdout text |
 
 **Sync mode** (no `formula`): each worker is started and `worker.wait()` is called before moving to the next. `controller.stdOut` is collected into `$results` and `controller.clear()` is called after each command. The method returns a Collection of raw stdout strings.
 
-**Async mode** (with `formula`): workers are started without waiting. The `formula` is stored on the per-command `data` context as `onResponse` and invoked by the controller's response handler (`_onResponse`). The method returns `Null` immediately. The calling process must stay alive to process callbacks, e.g. a worker started with `CALL WORKER`.
+**Async mode** (with `formula`): workers are started without waiting. The `formula` is stored on the per-command `data` context as `onResponse` and invoked by the controller's response handler (`_onResponse`), which then calls `controller.clear()` so `stdOut` does not grow across queries. The method returns `Null` immediately. The calling process must stay alive to process callbacks, e.g. a worker started with `CALL WORKER`.
 
 `formula` is called with two parameters:
 
