@@ -20,13 +20,6 @@ nonnumeric_search = false
 align = "Left"
 
 [[columns]]
-kind = "Tty"
-style = "BrightWhite|Black"
-numeric_search = false
-nonnumeric_search = false
-align = "Left"
-
-[[columns]]
 kind = "UsageCpu"
 style = "ByPercentage"
 numeric_search = false

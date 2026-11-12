@@ -56,6 +56,6 @@ rustup default stable-x86_64-pc-windows-msvc --force-non-host
 cargo build --release
 ```
 
-The component passes `--load-config` with `tcp/Resources/procs.toml`, the output of `procs --gen-config` for the bundled version. Regenerate it, and update the table above, when you update `procs`.
+The component passes `--load-config` with `tcp/Resources/procs.toml`, the output of `procs --gen-config` for the bundled version without the `Tty` column, which Windows builds of `procs` reject. Regenerate it the same way, and update the table above, when you update `procs`.
 
 The CI tests (`.github/workflows/test.yml`, `tests/run.sh`) compile the component and check it against real listeners on macOS and Windows with the tool4d version in `package.json`.
