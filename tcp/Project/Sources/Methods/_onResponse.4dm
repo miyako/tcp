@@ -18,4 +18,6 @@ $matches:=$get.call(This:C1470; $port; $json)
 var $PID : Collection
 $PID:=$matches=Null:C1517 ? [] : $matches.extract("PID")
 
-$context.onResponse.call(This:C1470; {success: $matches=Null:C1517; PID: $PID; port: $port}; $context.data)
+If (OB Instance of:C1731($context.onResponse; 4D:C1709.Function))
+	$context.onResponse.call(This:C1470; {success: $matches=Null:C1517; PID: $PID; port: $port}; $context.data)
+End if 
