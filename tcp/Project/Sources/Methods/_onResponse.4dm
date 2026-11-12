@@ -19,7 +19,7 @@ End if
 
 var $error : Text
 If ($json=Null:C1517)
-	$error:=Trim:C1853(This:C1470.stdErr)
+	$error:=Trim:C1853(String:C10($worker.responseError))
 	If ($error="")
 		$error:="procs returned no data"
 	End if 
