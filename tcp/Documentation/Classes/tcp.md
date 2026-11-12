@@ -5,13 +5,15 @@
 
 | Parameter | Type | | Description |
 | --- | --- | --- | --- |
-| controller | 4D.Class | -> | Optional custom controller class; must extend `_tcp_Controller` (default: `cs.tcp._tcp_Controller`) |
+| controller | 4D.Class | -> | Optional custom controller class (default: `cs.tcp._tcp_Controller`); see note below |
 
 ## Description
 
 `cs.tcp.tcp` extends [`_CLI`](_CLI.md) and wraps [`procs`](https://github.com/dalance/procs), a `ps` replacement written in Rust, to inspect which processes are listening on given TCP ports. It invokes `procs --insert port --json` and parses the JSON output to filter results by port number.
 
-If a class that does not extend `_tcp_Controller` is passed as `controller`, the constructor silently falls back to `cs.tcp._tcp_Controller`.
+The command does not filter by port: each query lists all processes with their TCP ports, and the filtering is done in 4D by `get()`.
+
+The constructor tests `controller` with `OB Instance of($controller; cs._tcp_Controller)`. Because `controller` is a class, not an instance, this test is false for any class passed, so the constructor currently always uses `cs.tcp._tcp_Controller`.
 
 ### Methods
 
@@ -42,11 +44,26 @@ Runs `procs --insert port --json` for one or more port queries.
 | Property | Type | Description |
 | --- | --- | --- |
 | port | Integer | TCP port to query |
-| output | 4D.File | If present, stdout is directed to this file rather than returned inline |
+| output | 4D.File | If present, the corresponding entry in the sync result is `Null` instead of the stdout text. The output is not written to the file in the current implementation |
 
 **Sync mode** (no `formula`): each worker is started and `worker.wait()` is called before moving to the next. `controller.stdOut` is collected into `$results` and `controller.clear()` is called after each command. The method returns a Collection of raw stdout strings.
 
-**Async mode** (with `formula`): workers are started without waiting. The `formula` is stored on the per-command `data` context as `onResponse` and invoked by the controller's response handler. The method returns `Null` immediately.
+**Async mode** (with `formula`): workers are started without waiting. The `formula` is stored on the per-command `data` context as `onResponse` and invoked by the controller's response handler (`_onResponse`). The method returns `Null` immediately. The calling process must stay alive to process callbacks, e.g. a worker started with `CALL WORKER`.
+
+`formula` is called with two parameters:
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| $1 | Object | Status object (see below) |
+| $2 | Object | The original `option` object |
+
+**status object properties:**
+
+| Property | Type | Description |
+| --- | --- | --- |
+| success | Boolean | `True` if **no** process is listening on `port` (the port is free) |
+| PID | Collection | PIDs of the processes listening on `port`; empty if `success` is `True` |
+| port | Integer | The queried port |
 
 In both modes a `data` context object is attached to each worker containing:
 
@@ -81,27 +98,76 @@ End if
 
 ### Asynchronous — check multiple ports
 
+Run in a worker so that the callbacks are processed:
+
 ```4d
-var $tcp : cs.tcp.tcp
-$tcp:=cs.tcp.tcp.new()
+#DECLARE($params : Object)
 
-var $onResponse : 4D.Function
-$onResponse:=Formula(
-    var $json : Collection
-    $json:=JSON Parse($2.data; Is collection)
-    var $matches : Collection
-    $matches:=$2.get.call($2; $2.port; $json)
-    If ($matches#Null)
-        LOG EVENT(Into 4D debug message; "Port "+String($2.port)+" in use")
-    End if
-)
-
-$tcp.check([\
-    {port: 8080}; \
-    {port: 8081}; \
-    {port: 8082}]; \
-    $onResponse)
+If (Count parameters=0)
+    
+    CALL WORKER(1; Current method name; {})
+    
+Else 
+    
+    var $tcp : cs.tcp.tcp
+    $tcp:=cs.tcp.tcp.new()
+    
+    $tcp.check([\
+        {port: 8080}; \
+        {port: 8081}; \
+        {port: 8082}]; \
+        Formula(onResponse))
+    
+End if 
 ```
+
+The callback is called once per port:
+
+```4d
+//onResponse
+#DECLARE($status : Object; $option : Object)
+
+If (Not($status.success))
+    LOG EVENT(Into 4D debug message; "Port "+String($status.port)+" in use by PID "+$status.PID.join(","))
+End if 
+```
+
+## Tip: checking port availability
+
+`$tcp.check({port: 443})` is the 4D equivalent of `sudo lsof -nP -iTCP:443 -sTCP:LISTEN` on macOS or `netstat -ano | findstr :443` on Windows.
+
+The main use case is a 4D web server (or any other listener) that fails to start because the port is taken. `WEB START SERVER` only tells you the port is in use; `check()` tells you **who** is using it.
+
+Call it **after** a failed start, not as a pre-check: a "free" result can be out of date by the time 4D binds the port (check-then-bind race).
+
+```4d
+WEB START SERVER
+
+If (Not(WEB Is server running))
+    
+    var $port : Integer
+    WEB GET OPTION(Web HTTPS port ID; $port)
+    
+    var $tcp : cs.tcp.tcp
+    $tcp:=cs.tcp.tcp.new()
+    
+    var $results : Collection
+    $results:=$tcp.check({port: $port})
+    
+    var $owners : Collection
+    $owners:=$tcp.get($port; JSON Parse($results[0]; Is collection))
+    
+    If ($owners#Null)
+        LOG EVENT(Into 4D debug message; "port "+String($port)+" is held by: "+JSON Stringify($owners))
+    End if 
+    
+End if 
+```
+
+> [!IMPORTANT]
+> * It observes; it does not reserve or block a port.
+> * On macOS, a 4D process running as a normal user **may** not see sockets owned by other users, such as root daemons or the bundled Apache `httpd` (`_www`). This has not been verified; test once against a root-owned listener before you rely on an empty result.
+> * On Windows, ports held by HTTP.sys (IIS, WinRM, SSRS, …) show up as `System` with PID `4`. Run `netsh http show servicestate` to identify the actual service.
 
 ## See also
 
