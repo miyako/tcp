@@ -2,9 +2,9 @@
 
 A 4D component that tells you which process(es) are listening on a given TCP port, from 4D code, on macOS (Intel and Apple Silicon) and Windows (x64). It returns the PID and process info without you having to know the syntax of `lsof`, `netstat` or `procs`.
 
-It wraps [procs](https://github.com/dalance/procs) (`procs --insert port --json`) through the class `cs.tcp.tcp`. See the [class reference](tcp/Documentation/Classes/tcp.md) and the [documentation site](https://miyako.github.io/tcp/).
+It wraps [procs](https://github.com/dalance/procs) (`procs --insert port --json`) through the class `cs.tcp.tcp`, and adds listeners owned by root, other users or `SYSTEM` from `netstat`. See the [class reference](tcp/Documentation/Classes/tcp.md) and the [documentation site](https://miyako.github.io/tcp/).
 
-Synchronous: `check()` returns the raw JSON output; filter it with `get()`.
+Synchronous: `check()` returns the JSON output (`Null` if the query failed; see `error` on the option object); filter it with `get()`.
 
 ```4d
 var $tcp : cs.tcp.tcp
@@ -17,7 +17,7 @@ var $matches : Collection
 $matches:=$tcp.get(8080; JSON Parse($results[0]; Is collection))
 ```
 
-Asynchronous: pass a callback and run in a worker (`CALL WORKER`) so the callback can be processed. The callback receives `$status.success` (`True` when the port is free) and `$status.PID`.
+Asynchronous: pass a callback and run in a worker (`CALL WORKER`) so the callback can be processed. The callback receives `$status.success` (`True` when the port is free), `$status.PID`, and `$status.error` if the query failed.
 
 ```4d
 $tcp.check({port: 8080}; Formula(onResponse))
@@ -35,6 +35,7 @@ cargo build --release --target x86_64-apple-darwin
 
 ```
 
+The component passes `--load-config` with `tcp/Resources/procs.toml`, the output of `procs --gen-config` for the bundled version. Regenerate it when you update `procs`.
 
 ```
 rustup default stable-x86_64-pc-windows-msvc --force-non-host
