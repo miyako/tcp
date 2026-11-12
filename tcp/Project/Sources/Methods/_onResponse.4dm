@@ -13,13 +13,18 @@ $text:=$worker.response
 
 var $json : Collection
 //exitCode may not be set yet when onResponse fires
-If (Num:C11($worker.exitCode)=0) && ($text#"")
-	$json:=Try(JSON Parse:C1218($text; Is collection:K8:32))
+If (Num:C11($worker.exitCode)=0) && (Match regex:C1019("^\\s*\\[[\\s\\S]*\\]\\s*$"; $text; 1))
+	$json:=JSON Parse:C1218($text; Is collection:K8:32)
 End if 
 
 var $error : Text
 If ($json=Null:C1517)
-	$error:=Trim:C1853(String:C10($worker.responseError))
+	$error:=String:C10($worker.responseError)
+	ARRAY LONGINT:C221($pos; 0)
+	ARRAY LONGINT:C221($len; 0)
+	If (Match regex:C1019("^\\s*([\\s\\S]*?)\\s*$"; $error; 1; $pos; $len))
+		$error:=Substring:C12($error; $pos{1}; $len{1})
+	End if 
 	If ($error="")
 		$error:="procs returned no data"
 	End if 

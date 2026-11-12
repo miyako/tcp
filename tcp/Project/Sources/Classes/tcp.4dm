@@ -5,7 +5,8 @@ Class constructor($controller : 4D:C1709.Class)
 	//accept cs._tcp_Controller or a subclass of it
 	var $class : 4D:C1709.Class
 	$class:=$controller
-	While ($class#Null:C1517) && ($class#cs:C1710._tcp_Controller)
+	//4D 20.x can't compare objects with =/#; includes() compares references
+	While ($class#Null:C1517) && (Not:C34([cs:C1710._tcp_Controller].includes($class)))
 		$class:=$class.superclass
 	End while 
 	

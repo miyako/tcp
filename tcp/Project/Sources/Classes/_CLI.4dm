@@ -145,9 +145,26 @@ Function quote($in : Text)->$out : Text
 Function _chmod()
 	
 	If (Is macOS:C1572)
-		//If (Application type=4D Remote mode)
+		
+		//once per session and executable
+		If (Storage:C1525._CLI_chmod=Null:C1517)
+			Use (Storage:C1525)
+				If (Storage:C1525._CLI_chmod=Null:C1517)
+					Storage:C1525._CLI_chmod:=New shared object:C1526
+				End if 
+			End use 
+		End if 
+		
+		If (Storage:C1525._CLI_chmod[This:C1470.executablePath]#Null:C1517)
+			return 
+		End if 
+		
 		SET ENVIRONMENT VARIABLE:C812("_4D_OPTION_CURRENT_DIRECTORY"; This:C1470.currentDirectory.platformPath)
 		SET ENVIRONMENT VARIABLE:C812("_4D_OPTION_BLOCKING_EXTERNAL_PROCESS"; "true")
 		LAUNCH EXTERNAL PROCESS:C811("chmod +x "+This:C1470.executableName)
-		//End if 
+		
+		Use (Storage:C1525._CLI_chmod)
+			Storage:C1525._CLI_chmod[This:C1470.executablePath]:=True:C214
+		End use 
+		
 	End if 

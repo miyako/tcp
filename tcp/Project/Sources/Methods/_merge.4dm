@@ -22,8 +22,9 @@ For each ($listener; $listeners)
 		continue
 	End if 
 	
-	$ports:=Try(JSON Parse:C1218(String:C10($entry.TCP); Is collection:K8:32))
-	If ($ports=Null:C1517)
+	If (Match regex:C1019("^\\[[\\d, ]*\\]$"; String:C10($entry.TCP); 1))
+		$ports:=JSON Parse:C1218($entry.TCP; Is collection:K8:32)
+	Else 
 		$ports:=[]
 	End if 
 	
